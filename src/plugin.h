@@ -23,6 +23,7 @@
 #define PHYSICALPATH_FUNC  CONNECTION_FUNC
 #define REQUESTDONE_FUNC   CONNECTION_FUNC
 #define URIHANDLER_FUNC    CONNECTION_FUNC
+#define READ_CONT_FUNC     CONNECTION_FUNC
 
 #define PLUGIN_DATA        size_t id
 
@@ -55,6 +56,7 @@ typedef struct {
 											    */
 	handler_t (* handle_subrequest)      (server *srv, connection *con, void *p_d);    /* */
 	handler_t (* connection_reset)       (server *srv, connection *con, void *p_d);    /* */
+	handler_t (* read_continuous)        (server *srv, connection *con, void *p_d);    /* */
 	void *data;
 
 	/* dlopen handle */
@@ -74,6 +76,7 @@ handler_t plugins_call_handle_physical(server *srv, connection *con);
 handler_t plugins_call_handle_connection_close(server *srv, connection *con);
 handler_t plugins_call_handle_joblist(server *srv, connection *con);
 handler_t plugins_call_connection_reset(server *srv, connection *con);
+handler_t plugins_call_read_continuous(server *srv, connection *con);
 
 handler_t plugins_call_handle_trigger(server *srv);
 handler_t plugins_call_handle_sighup(server *srv);

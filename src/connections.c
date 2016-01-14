@@ -1152,6 +1152,8 @@ found_header_end:
 		}
 
 		break;
+	case CON_STATE_READ_CONTINUOUS:
+		break;
 	default: break;
 	}
 
@@ -1226,7 +1228,8 @@ static handler_t connection_handle_fdevent(server *srv, void *context, int reven
 	}
 
 	if (con->state == CON_STATE_READ ||
-	    con->state == CON_STATE_READ_POST) {
+	    con->state == CON_STATE_READ_POST ||
+	    con->state == CON_STATE_READ_CONTINUOUS) {
 		connection_handle_read_state(srv, con);
 	}
 
@@ -1479,6 +1482,9 @@ int connection_state_machine(server *srv, connection *con) {
 				done = -1;
 			case HANDLER_WAIT_FOR_EVENT:
 				/* come back here */
+				if (con->state == CON_STATE_READ_CONTINUOUS) {
+					break;
+				}
 				connection_set_state(srv, con, CON_STATE_HANDLE_REQUEST);
 
 				break;
@@ -1618,12 +1624,16 @@ int connection_state_machine(server *srv, connection *con) {
 			break;
 		case CON_STATE_READ_POST:
 		case CON_STATE_READ:
+		case CON_STATE_READ_CONTINUOUS:
 			if (srv->srvconf.log_state_handling) {
 				log_error_write(srv, __FILE__, __LINE__, "sds",
 						"state for fd", con->fd, connection_get_state(con->state));
 			}
 
 			connection_handle_read_state(srv, con);
+			if (con->state == CON_STATE_READ_CONTINUOUS) {
+				plugins_call_read_continuous(srv, con);
+			}
 			break;
 		case CON_STATE_WRITE:
 			if (srv->srvconf.log_state_handling) {
@@ -1791,6 +1801,9 @@ int connection_state_machine(server *srv, connection *con) {
 		} else {
 			fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);
 		}
+		break;
+	case CON_STATE_READ_CONTINUOUS:
+		/* leave up to plugins */
 		break;
 	default:
 		fdevent_event_del(srv->ev, &(con->fde_ndx), con->fd);

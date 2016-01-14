@@ -632,6 +632,32 @@ dnl build version-id
 LIGHTTPD_VERSION_ID=`echo $PACKAGE_VERSION | $AWK -F '.' '{print "(" $1 " << 16 | " $2 " << 8 | " $3 ")"}'`
 AC_DEFINE_UNQUOTED([LIGHTTPD_VERSION_ID], [$LIGHTTPD_VERSION_ID], [lighttpd-version-id])
 
+dnl check for websocket support
+AC_C_BIGENDIAN
+if test "x$ac_cv_c_bigendian" = "xyes"; then
+    WEBSOCKET_CFLAGS="-DWORDS_BIGENDIAN"
+fi
+AC_MSG_CHECKING(whether --with-websocket option specified)
+AC_ARG_WITH([websocket],
+            AC_HELP_STRING([--with-websocket@<:@=all/rfc-6455/ietf-00@:>@],
+                           [support WebSocket version@<:@default=no@:>@]),
+            [ with_websocket=$withval ], [ with_websocket=no ])
+AC_MSG_RESULT(${with_websocket})
+if test "x${with_websocket}" = "xyes" -o \
+        "x${with_websocket}" = "xall" -o "x${with_websocket}" = "xALL" ; then
+    with_websocket=all
+    WEBSOCKET_CFLAGS="$WEBSOCKET_CFLAGS -D_MOD_WEBSOCKET_SPEC_IETF_00_ -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
+elif test "x${with_websocket}" = "xrfc-6455" -o "x${with_websocket}" = "xRFC-6455" ; then
+    WEBSOCKET_CFLAGS="$WEBSOCKET_CFLAGS -D_MOD_WEBSOCKET_SPEC_RFC_6455_"
+elif test "x${with_websocket}" = "xietf-00" -o "x${with_websocket}" = "xIETF-00" ; then
+    WEBSOCKET_CFLAGS="$WEBSOCKET_CFLAGS -D_MOD_WEBSOCKET_SPEC_IETF_00_"
+elif test "x${with_websocket}" != "xno" ; then
+    AC_MSG_ERROR([websocket option is invalid. plz specify all, ietf-00, rfc-6455])
+fi
+AC_SUBST(with_websocket)
+AC_SUBST(WEBSOCKET_CFLAGS)
+AM_CONDITIONAL(WITH_WEBSOCKET, test x$with_websocket != xno)
+
 AC_CONFIG_FILES([Makefile src/Makefile
 		 doc/config/conf.d/Makefile \
 		 doc/config/vhosts.d/Makefile \
@@ -764,6 +790,13 @@ else
 	disable_feature="$disable_feature $features"
 fi
 
+dnl websocket
+plugins="mod_websocket"
+if test "x${with_websocket}" != "xno"; then
+	do_build="$do_build $plugins(${with_websocket})"
+else
+	no_build="$no_build $plugins"
+fi
 
 dnl output
 
